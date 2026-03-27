@@ -38,7 +38,7 @@ export function AuthProvider({ children }) {
     if (bcrypt) {
       valid = await bcrypt.compare(password, data.password_hash)
     } else {
-      valid = data.password_hash === btoa(password)
+      valid = data.password_hash === password
     }
 
     if (!valid) throw new Error('סיסמה שגויה')
@@ -61,7 +61,7 @@ export function AuthProvider({ children }) {
       throw new Error('אין גישה לכתובת מייל זו')
     }
     const name = email.startsWith('daniel') ? 'דניאל' : 'דביר'
-    const hash = btoa(password)
+    const hash = password
 
     const { data, error } = await supabase
       .from('manage_users')
