@@ -33,13 +33,7 @@ export function AuthProvider({ children }) {
       throw new Error('SETUP_REQUIRED')
     }
 
-    const bcrypt = await import('bcryptjs').catch(() => null)
-    let valid = false
-    if (bcrypt) {
-      valid = await bcrypt.compare(password, data.password_hash)
-    } else {
-      valid = data.password_hash === password
-    }
+    const valid = data.password_hash === password
 
     if (!valid) throw new Error('סיסמה שגויה')
 
@@ -100,3 +94,4 @@ export function AuthProvider({ children }) {
 }
 
 export const useAuth = () => useContext(AuthContext)
+
