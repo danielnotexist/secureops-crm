@@ -7,6 +7,7 @@ import DashboardPage from './pages/DashboardPage'
 import ClientsPage from './pages/ClientsPage'
 import ClientDetailPage from './pages/ClientDetailPage'
 import ProjectsPage from './pages/ProjectsPage'
+import TicketsPage from './pages/TicketsPage'
 import LogPage from './pages/LogPage'
 
 function AppRoutes() {
@@ -15,7 +16,7 @@ function AppRoutes() {
   if (loading) return (
     <div style={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg)' }}>
       <div style={{ textAlign: 'center' }}>
-        <div style={{ fontSize: 40, marginBottom: 12, animation: 'pulse 1.5s infinite' }}>🛡️</div>
+        <div style={{ fontSize: 40, marginBottom: 12 }}>🛡️</div>
         <div style={{ color: 'var(--text2)', fontSize: 14 }}>טוען...</div>
       </div>
     </div>
@@ -31,6 +32,7 @@ function AppRoutes() {
         <Route path="/clients" element={<ClientsPage />} />
         <Route path="/clients/:id" element={<ClientDetailPage />} />
         <Route path="/projects" element={<ProjectsPage />} />
+        <Route path="/tickets" element={<TicketsPage />} />
         <Route path="/log" element={<LogPage />} />
         <Route path="*" element={<Navigate to="/dashboard" replace />} />
       </Routes>
