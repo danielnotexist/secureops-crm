@@ -147,7 +147,7 @@ export default function ProjectsPage() {
               }}
             >
               <div style={{ flex: 1, minWidth: 0, textAlign: 'right' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6, flexWrap: 'wrap', justifyContent: 'flex-start' }}>
                   <span style={{ fontWeight: 700, fontSize: 14 }}>{p.name}</span>
                   <span className={`badge ${STATUS[p.status]?.cls}`}>{STATUS[p.status]?.label}</span>
                   {p.priority && (
@@ -156,7 +156,7 @@ export default function ProjectsPage() {
                   {p.clients?.name && <span style={{ fontSize: 11, color: 'var(--text3)' }}>· {p.clients.name}</span>}
                 </div>
                 {p.description && <div style={{ fontSize: 12, color: 'var(--text2)', marginBottom: 6 }}>{p.description}</div>}
-                <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap', fontSize: 12, color: 'var(--text3)', justifyContent: 'flex-end' }}>
+                <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap', fontSize: 12, color: 'var(--text3)', justifyContent: 'flex-start' }}>
                   {p.start_date && (
                     <span>
                       {p.start_date}

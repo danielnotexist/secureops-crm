@@ -160,7 +160,7 @@ export default function ClientsPage() {
                   </div>
 
                   <div style={{ flex: 1, minWidth: 160, textAlign: 'right' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', justifyContent: 'flex-start' }}>
                       <span style={{ fontWeight: 800, fontSize: 15 }}>{c.name}</span>
                       <span className={`badge ${statusMap[c.status]?.cls || 'badge-inactive'}`}>{statusMap[c.status]?.label}</span>
                       {c.industry && (
@@ -172,7 +172,7 @@ export default function ClientsPage() {
                         <span className="badge badge-tickets-open">🎫 {openTix} קריאות פתוחות</span>
                       )}
                     </div>
-                    <div style={{ display: 'flex', gap: 12, marginTop: 6, flexWrap: 'wrap', justifyContent: 'flex-end', fontSize: 13, color: 'var(--text2)' }}>
+                    <div style={{ display: 'flex', gap: 12, marginTop: 6, flexWrap: 'wrap', justifyContent: 'flex-start', fontSize: 13, color: 'var(--text2)' }}>
                       {c.contact_name && <span>👤 {c.contact_name}</span>}
                       {c.phone && (
                         <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }} dir="ltr">
@@ -212,7 +212,7 @@ export default function ClientsPage() {
                     flexWrap: 'wrap',
                     gap: 16,
                     padding: '12px 18px',
-                    justifyContent: 'flex-end',
+                    justifyContent: 'flex-start',
                     fontSize: 12,
                     color: 'var(--text2)',
                   }}

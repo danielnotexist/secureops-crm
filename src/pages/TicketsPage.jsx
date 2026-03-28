@@ -185,7 +185,7 @@ export default function TicketsPage() {
               }}
             >
               <div style={{ flex: 1, minWidth: 0, textAlign: 'right' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 5, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 5, flexWrap: 'wrap', justifyContent: 'flex-start' }}>
                   <span style={{ fontWeight: 700, fontSize: 14 }}>{tk.subject}</span>
                   <span className={`badge ${STATUS_MAP[tk.status]?.cls}`}>{STATUS_MAP[tk.status]?.label}</span>
                   {tk.priority && (
@@ -210,7 +210,7 @@ export default function TicketsPage() {
                     <strong>פתרון:</strong> {tk.resolution_notes}
                   </div>
                 )}
-                <div style={{ display: 'flex', gap: 12, fontSize: 11, color: 'var(--text3)', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+                <div style={{ display: 'flex', gap: 12, fontSize: 11, color: 'var(--text3)', flexWrap: 'wrap', justifyContent: 'flex-start' }}>
                   {tk.clients?.name && (
                     <span
                       role="link"
