@@ -21,20 +21,37 @@ export function AuthProvider({ children }) {
     if (!ALLOWED_EMAILS.includes(email.toLowerCase())) {
       throw new Error('אין גישה לכתובת מייל זו')
     }
-    const { data, error } = await supabase
-      .from('manage_users')
-      .select('*')
-      .eq('email', email.toLowerCase())
-      .single()
 
-    if (error && error.code !== 'PGRST116') throw new Error('שגיאה בהתחברות')
+    // Dev mode: allow local login when DB is unavailable
+    const devKey = `secureops_dev_pass_${email.toLowerCase()}`
+    const devPass = localStorage.getItem(devKey)
 
-    if (!data) {
-      throw new Error('SETUP_REQUIRED')
+    let data = null
+    let dbAvailable = true
+    try {
+      const { data: d, error } = await supabase
+        .from('manage_users')
+        .select('*')
+        .eq('email', email.toLowerCase())
+        .single()
+      if (error && error.code !== 'PGRST116') dbAvailable = false
+      else data = d
+    } catch {
+      dbAvailable = false
+    }
+
+    if (!dbAvailable || !data) {
+      // Fallback to locally stored dev password
+      if (!devPass) throw new Error('SETUP_REQUIRED')
+      if (devPass !== password) throw new Error('סיסמה שגויה')
+      const name = email.startsWith('daniel') ? 'דניאל' : 'דביר'
+      const userData = { email: email.toLowerCase(), name, id: 'local' }
+      setUser(userData)
+      localStorage.setItem('secureops_user', JSON.stringify(userData))
+      return userData
     }
 
     const valid = data.password_hash === password
-
     if (!valid) throw new Error('סיסמה שגויה')
 
     const userData = { email: data.email, name: data.name, id: data.id }
@@ -45,7 +62,7 @@ export function AuthProvider({ children }) {
       user_email: email,
       action: 'login',
       description: 'התחברות למערכת',
-    })
+    }).catch(() => {})
 
     return userData
   }
@@ -55,17 +72,25 @@ export function AuthProvider({ children }) {
       throw new Error('אין גישה לכתובת מייל זו')
     }
     const name = email.startsWith('daniel') ? 'דניאל' : 'דביר'
-    const hash = password
 
-    const { data, error } = await supabase
-      .from('manage_users')
-      .upsert({ email: email.toLowerCase(), password_hash: hash, name }, { onConflict: 'email' })
-      .select()
-      .single()
+    // Always save locally for dev fallback
+    const devKey = `secureops_dev_pass_${email.toLowerCase()}`
+    localStorage.setItem(devKey, password)
 
-    if (error) throw new Error('שגיאה בהגדרת סיסמה')
+    let userData = { email: email.toLowerCase(), name, id: 'local' }
+    try {
+      const { data, error } = await supabase
+        .from('manage_users')
+        .upsert({ email: email.toLowerCase(), password_hash: password, name }, { onConflict: 'email' })
+        .select()
+        .single()
+      if (!error && data) {
+        userData = { email: data.email, name: data.name, id: data.id }
+      }
+    } catch {
+      // DB unavailable, use local fallback
+    }
 
-    const userData = { email: data.email, name: data.name, id: data.id }
     setUser(userData)
     localStorage.setItem('secureops_user', JSON.stringify(userData))
     return userData
