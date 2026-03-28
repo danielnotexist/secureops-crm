@@ -239,6 +239,8 @@ function ProjectModal({ clients, project, onClose, onSaved }) {
       budget: form.budget ? Number(form.budget) : null,
       progress: Number(form.progress),
       client_id: form.client_id || null,
+      start_date: form.start_date || null,
+      end_date: form.end_date || null,
     }
     if (project?.id) {
       await supabase.from('projects').update(payload).eq('id', project.id)
@@ -334,6 +336,7 @@ function ProjectModal({ clients, project, onClose, onSaved }) {
               max="100"
               value={form.progress}
               onChange={(e) => set('progress', e.target.value)}
+              dir="ltr"
               style={{ width: '100%', accentColor: 'var(--primary)', cursor: 'pointer', marginBottom: 6 }}
             />
             <div style={{ height: 5, background: 'var(--bg3)', borderRadius: 3, overflow: 'hidden', direction: 'ltr' }}>
