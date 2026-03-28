@@ -172,7 +172,7 @@ export default function ProjectsPage() {
                       <span>התקדמות</span>
                       <span>{p.progress}%</span>
                     </div>
-                    <div style={{ height: 5, background: 'var(--bg3)', borderRadius: 3, overflow: 'hidden', direction: 'ltr' }}>
+                    <div style={{ height: 5, background: 'var(--bg3)', borderRadius: 3, overflow: 'hidden', direction: 'rtl' }}>
                       <div
                         style={{
                           height: '100%',
@@ -336,10 +336,10 @@ function ProjectModal({ clients, project, onClose, onSaved }) {
               max="100"
               value={form.progress}
               onChange={(e) => set('progress', e.target.value)}
-              dir="ltr"
+              dir="rtl"
               style={{ width: '100%', accentColor: 'var(--primary)', cursor: 'pointer', marginBottom: 6 }}
             />
-            <div style={{ height: 5, background: 'var(--bg3)', borderRadius: 3, overflow: 'hidden', direction: 'ltr' }}>
+            <div style={{ height: 5, background: 'var(--bg3)', borderRadius: 3, overflow: 'hidden', direction: 'rtl' }}>
               <div
                 style={{
                   height: '100%',
