@@ -46,7 +46,7 @@ export default function LogPage() {
   }, {})
 
   return (
-    <div className="animate-in">
+    <div className="animate-in" dir="rtl">
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 24, flexWrap: 'wrap', gap: 12 }}>
         <div>
           <h2 style={{ fontSize: 22, fontWeight: 800 }}>📋 יומן פעילות</h2>

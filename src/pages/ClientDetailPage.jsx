@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../context/AuthContext'
 import { useToast } from '../components/Toast'
-import { ArrowRight, Edit2, Trash2, Plus, Phone, Mail, Globe, MapPin, X, CheckCircle } from 'lucide-react'
+import { ChevronRight, Edit2, Trash2, Plus, Phone, Mail, Globe, MapPin, X, CheckCircle } from 'lucide-react'
 import ClientModal from '../components/ClientModal'
 
 const TABS = [
@@ -11,6 +11,7 @@ const TABS = [
   { id: 'assets', label: 'נכסים', icon: '💾' },
   { id: 'tickets', label: 'קריאות', icon: '🎫' },
   { id: 'contacts', label: 'אנשי קשר', icon: '👤' },
+  { id: 'documents', label: 'מסמכים', icon: '📄' },
   { id: 'company', label: 'פרטי חברה', icon: '🏢' },
 ]
 
@@ -26,6 +27,7 @@ export default function ClientDetailPage() {
   const [assets, setAssets] = useState([])
   const [tickets, setTickets] = useState([])
   const [contacts, setContacts] = useState([])
+  const [documents, setDocuments] = useState([])
   const [tab, setTab] = useState('services')
   const [loading, setLoading] = useState(true)
   const [modal, setModal] = useState(null) // null | 'edit' | 'service' | 'asset' | 'ticket' | 'contact'
@@ -35,14 +37,20 @@ export default function ClientDetailPage() {
 
   const loadAll = async () => {
     setLoading(true)
-    const [{ data: c }, { data: s }, { data: a }, { data: t }, { data: ct }] = await Promise.all([
+    const [{ data: c }, { data: s }, { data: a }, { data: t }, { data: ct }, docRes] = await Promise.all([
       supabase.from('clients').select('*').eq('id', id).single(),
       supabase.from('services').select('*').eq('client_id', id).order('created_at', { ascending: false }),
       supabase.from('assets').select('*').eq('client_id', id).order('created_at', { ascending: false }),
       supabase.from('tickets').select('*').eq('client_id', id).order('created_at', { ascending: false }),
       supabase.from('contacts').select('*').eq('client_id', id).order('created_at', { ascending: false }),
+      supabase.from('client_documents').select('*').eq('client_id', id).order('created_at', { ascending: false }),
     ])
-    setClient(c); setServices(s || []); setAssets(a || []); setTickets(t || []); setContacts(ct || [])
+    setClient(c)
+    setServices(s || [])
+    setAssets(a || [])
+    setTickets(t || [])
+    setContacts(ct || [])
+    setDocuments(!docRes.error && docRes.data ? docRes.data : [])
     setLoading(false)
   }
 
@@ -80,8 +88,8 @@ export default function ClientDetailPage() {
 
   return (
     <div className="animate-in" dir="rtl">
-      <button className="btn btn-ghost btn-sm" style={{ marginBottom: 14 }} onClick={() => navigate('/clients')}>
-        <ArrowRight size={14} /> חזרה ללקוחות
+      <button type="button" className="btn btn-ghost btn-sm" style={{ marginBottom: 14 }} onClick={() => navigate('/clients')}>
+        <ChevronRight size={16} /> חזרה ללקוחות
       </button>
 
       {/* Header */}
@@ -124,19 +132,35 @@ export default function ClientDetailPage() {
         </div>
       </div>
 
-      {/* Tabs */}
-      <div style={{ display: 'flex', gap: 2, marginBottom: 16, borderBottom: '1px solid var(--border)', overflowX: 'auto' }}>
-        {TABS.map(t => (
-          <button key={t.id} onClick={() => setTab(t.id)} style={{
-            background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit',
-            padding: '8px 14px', fontSize: 13, fontWeight: tab === t.id ? 700 : 500,
-            color: tab === t.id ? 'var(--text)' : 'var(--text2)',
-            borderBottom: `2px solid ${tab === t.id ? 'var(--primary)' : 'transparent'}`,
-            whiteSpace: 'nowrap', transition: 'all 0.15s', marginBottom: '-1px',
-            display: 'flex', alignItems: 'center', gap: 6
-          }}>
-            {t.icon} {t.label}
-            {t.id === 'tickets' && openTickets > 0 && <span style={{ background: 'var(--danger)', color: '#fff', borderRadius: 10, padding: '1px 5px', fontSize: 10, fontWeight: 700 }}>{openTickets}</span>}
+      {/* Tabs — סדר מימין לשמאל */}
+      <div className="tabs-row">
+        {TABS.map((tb) => (
+          <button
+            key={tb.id}
+            type="button"
+            onClick={() => setTab(tb.id)}
+            style={{
+              background: 'none',
+              border: 'none',
+              cursor: 'pointer',
+              fontFamily: 'inherit',
+              padding: '10px 14px',
+              fontSize: 13,
+              fontWeight: tab === tb.id ? 700 : 500,
+              color: tab === tb.id ? 'var(--primary)' : 'var(--text2)',
+              borderBottom: `2px solid ${tab === tb.id ? 'var(--primary)' : 'transparent'}`,
+              whiteSpace: 'nowrap',
+              transition: 'all 0.15s',
+              marginBottom: '-1px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 6,
+            }}
+          >
+            {tb.icon} {tb.label}
+            {tb.id === 'tickets' && openTickets > 0 && (
+              <span style={{ background: 'var(--danger)', color: '#fff', borderRadius: 10, padding: '1px 6px', fontSize: 10, fontWeight: 700 }}>{openTickets}</span>
+            )}
           </button>
         ))}
       </div>
@@ -146,11 +170,11 @@ export default function ClientDetailPage() {
 
         {/* SERVICES */}
         {tab === 'services' && (
-          <Section title="🔧 שירותים" onAdd={() => setModal('service')}>
+          <Section title={`🔧 שירותים (${services.length})`} onAdd={() => setModal('service')}>
             {services.length === 0 ? <Empty text="אין שירותים עדיין" /> : services.map(s => (
               <div key={s.id} className="card" style={{ marginBottom: 10 }}>
-                <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
-                  <div style={{ flex: 1 }}>
+                <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, direction: 'rtl' }}>
+                  <div style={{ flex: 1, textAlign: 'right', minWidth: 0 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6, flexWrap: 'wrap' }}>
                       <span style={{ fontWeight: 700, fontSize: 14 }}>{s.name}</span>
                       <span className={`badge badge-${s.status === 'active' ? 'active' : 'inactive'}`}>{s.status === 'active' ? '✅ פעיל' : '⚪ לא פעיל'}</span>
@@ -173,12 +197,12 @@ export default function ClientDetailPage() {
 
         {/* ASSETS */}
         {tab === 'assets' && (
-          <Section title="💾 נכסים" onAdd={() => setModal('asset')}>
+          <Section title={`💾 נכסים (${assets.length})`} onAdd={() => setModal('asset')}>
             {assets.length === 0 ? <Empty text="אין נכסים עדיין" /> : (
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(210px,1fr))', gap: 12 }}>
                 {assets.map(a => (
                   <div key={a.id} className="card" style={{ position: 'relative' }}>
-                    <button className="btn btn-danger btn-icon" style={{ position: 'absolute', top: 10, left: 10 }} onClick={() => deleteItem('assets', a.id, a.name)}><Trash2 size={12} /></button>
+                    <button type="button" className="btn btn-danger btn-icon" style={{ position: 'absolute', top: 10, insetInlineEnd: 10 }} onClick={() => deleteItem('assets', a.id, a.name)}><Trash2 size={12} /></button>
                     <div style={{ fontSize: 26, marginBottom: 8 }}>{a.type === 'server' ? '🖥️' : a.type === 'firewall' ? '🛡️' : a.type === 'switch' ? '🔀' : a.type === 'nas' ? '💽' : '💻'}</div>
                     <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 4 }}>{a.name}</div>
                     {a.type && <div style={{ fontSize: 12, color: 'var(--text3)' }}>סוג: {a.type}</div>}
@@ -193,11 +217,18 @@ export default function ClientDetailPage() {
 
         {/* TICKETS */}
         {tab === 'tickets' && (
-          <Section title="🎫 קריאות שירות" onAdd={() => { setEditItem(null); setModal('ticket') }}>
+          <Section title={`🎫 קריאות שירות (${tickets.length})`} onAdd={() => { setEditItem(null); setModal('ticket') }}>
             {tickets.length === 0 ? <Empty text="אין קריאות שירות" /> : tickets.map(t => (
-              <div key={t.id} className="card" style={{ marginBottom: 10, borderRight: `3px solid ${t.status === 'open' ? 'var(--danger)' : t.status === 'inprogress' ? 'var(--warning)' : 'var(--success)'}` }}>
-                <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
-                  <div style={{ flex: 1 }}>
+              <div
+                key={t.id}
+                className="card"
+                style={{
+                  marginBottom: 10,
+                  borderInlineStart: `3px solid ${t.status === 'open' ? 'var(--danger)' : t.status === 'inprogress' ? 'var(--warning)' : 'var(--success)'}`,
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, direction: 'rtl' }}>
+                  <div style={{ flex: 1, textAlign: 'right', minWidth: 0 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4, flexWrap: 'wrap' }}>
                       <span style={{ fontWeight: 700 }}>{t.subject}</span>
                       <span className={`badge badge-${t.status === 'open' ? 'open' : t.status === 'inprogress' ? 'inprogress' : 'done'}`}>
@@ -222,12 +253,12 @@ export default function ClientDetailPage() {
 
         {/* CONTACTS */}
         {tab === 'contacts' && (
-          <Section title="👤 אנשי קשר" onAdd={() => setModal('contact')}>
+          <Section title={`👤 אנשי קשר (${contacts.length})`} onAdd={() => setModal('contact')}>
             {contacts.length === 0 ? <Empty text="אין אנשי קשר" /> : (
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(210px,1fr))', gap: 12 }}>
                 {contacts.map(c => (
                   <div key={c.id} className="card" style={{ position: 'relative' }}>
-                    <button className="btn btn-danger btn-icon" style={{ position: 'absolute', top: 10, left: 10 }} onClick={() => deleteItem('contacts', c.id, c.name)}><Trash2 size={12} /></button>
+                    <button type="button" className="btn btn-danger btn-icon" style={{ position: 'absolute', top: 10, insetInlineEnd: 10 }} onClick={() => deleteItem('contacts', c.id, c.name)}><Trash2 size={12} /></button>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
                       <div style={{ width: 38, height: 38, borderRadius: '50%', background: 'linear-gradient(135deg, var(--primary), var(--accent2))', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 15, color: '#fff' }}>{c.name?.[0]}</div>
                       <div>
@@ -244,6 +275,28 @@ export default function ClientDetailPage() {
           </Section>
         )}
 
+        {/* DOCUMENTS */}
+        {tab === 'documents' && (
+          <Section title={`📄 מסמכים (${documents.length})`} onAdd={null}>
+            {documents.length === 0 ? (
+              <Empty text="אין מסמכים — ניתן להוסיף לאחר הרצת המיגרציה ב-Supabase" />
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {documents.map((d) => (
+                  <div key={d.id} className="card" style={{ padding: '12px 14px' }}>
+                    <div style={{ fontWeight: 700 }}>{d.name}</div>
+                    {d.file_url && (
+                      <a href={d.file_url} target="_blank" rel="noreferrer" style={{ fontSize: 12, color: 'var(--primary)' }}>
+                        קישור לקובץ
+                      </a>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </Section>
+        )}
+
         {/* COMPANY */}
         {tab === 'company' && (
           <div className="card">
@@ -253,10 +306,17 @@ export default function ClientDetailPage() {
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(180px,1fr))', gap: 10 }}>
               {[
-                ['🏢', 'שם החברה', client.name], ['👤', 'איש קשר', client.contact_name],
-                ['📞', 'טלפון', client.phone], ['📧', 'מייל', client.email],
-                ['📍', 'עיר', client.city], ['🌐', 'אתר', client.website],
-                ['🏭', 'ענף', client.industry], ['💰', 'תשלום חודשי', client.monthly_value ? `₪${Number(client.monthly_value).toLocaleString()}` : '—'],
+                ['🏢', 'שם החברה', client.name],
+                ['👤', 'איש קשר', client.contact_name],
+                ['📞', 'טלפון', client.phone],
+                ['📧', 'מייל', client.email],
+                ['🏠', 'כתובת', client.address],
+                ['📍', 'עיר', client.city],
+                ['🌐', 'אתר', client.website],
+                ['🏭', 'ענף', client.industry],
+                ['💰', 'תשלום חודשי', client.monthly_value ? `₪${Number(client.monthly_value).toLocaleString()}` : '—'],
+                ['📅', 'תחילת חוזה', client.contract_start],
+                ['📅', 'סיום חוזה', client.contract_end],
               ].map(([icon, label, value]) => (
                 <div key={label} style={{ padding: '10px 14px', background: 'var(--bg2)', borderRadius: 8, border: '1px solid var(--border)' }}>
                   <div style={{ fontSize: 11, color: 'var(--text3)', marginBottom: 3 }}>{icon} {label}</div>
@@ -287,10 +347,16 @@ export default function ClientDetailPage() {
 /* ---- Reusable helpers ---- */
 function Section({ title, onAdd, children }) {
   return (
-    <div>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
-        <span style={{ fontWeight: 700, fontSize: 15 }}>{title}</span>
-        {onAdd && <button className="btn btn-primary btn-sm" onClick={onAdd}><Plus size={13} /> הוסף</button>}
+    <div dir="rtl">
+      <div className="page-header-row" style={{ marginBottom: 14 }}>
+        <div className="page-title-block" style={{ fontWeight: 700, fontSize: 15 }}>
+          {title}
+        </div>
+        {onAdd && (
+          <button type="button" className="btn btn-primary btn-sm" onClick={onAdd}>
+            <Plus size={13} /> הוסף
+          </button>
+        )}
       </div>
       {children}
     </div>
@@ -314,7 +380,7 @@ function Modal({ title, onClose, children, wide }) {
 }
 function Footer({ onClose, loading, label }) {
   return (
-    <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginTop: 8, paddingTop: 8, borderTop: '1px solid var(--border)' }}>
+    <div className="form-actions" style={{ marginTop: 8, paddingTop: 12, borderTop: '1px solid var(--border)' }}>
       <button type="button" className="btn btn-ghost" onClick={onClose}>ביטול</button>
       <button type="submit" className="btn btn-primary" disabled={loading}>{loading ? '⏳ שומר...' : label}</button>
     </div>
@@ -463,7 +529,14 @@ function AssetModal({ clientId, clientName, onClose, onSaved }) {
 /* ---- Ticket Modal ---- */
 function TicketModal({ clientId, clientName, ticket, onClose, onSaved }) {
   const { user } = useAuth(); const addToast = useToast()
-  const [f, setF] = useState({ subject: ticket?.subject || '', description: ticket?.description || '', priority: ticket?.priority || 'medium', status: ticket?.status || 'open', resolution_notes: ticket?.resolution_notes || '' })
+  const [f, setF] = useState({
+    subject: ticket?.subject || '',
+    description: ticket?.description || '',
+    priority: ticket?.priority || 'medium',
+    status: ticket?.status || 'open',
+    resolution_notes: ticket?.resolution_notes || '',
+    assigned_to: ticket?.assigned_to || '',
+  })
   const [loading, setLoading] = useState(false)
   const set = (k, v) => setF(p => ({ ...p, [k]: v }))
 
@@ -471,7 +544,15 @@ function TicketModal({ clientId, clientName, ticket, onClose, onSaved }) {
     e.preventDefault()
     if (!f.subject.trim()) { addToast('נושא שדה חובה', 'error'); return }
     setLoading(true)
-    const payload = { subject: f.subject.trim(), description: f.description || null, priority: f.priority, status: f.status, resolution_notes: f.resolution_notes || null, updated_at: new Date().toISOString() }
+    const payload = {
+      subject: f.subject.trim(),
+      description: f.description || null,
+      priority: f.priority,
+      status: f.status,
+      resolution_notes: f.resolution_notes || null,
+      assigned_to: f.assigned_to?.trim() || null,
+      updated_at: new Date().toISOString(),
+    }
     if (ticket?.id) {
       const { error } = await supabase.from('tickets').update(payload).eq('id', ticket.id)
       if (error) { addToast('שגיאה: ' + error.message, 'error'); setLoading(false); return }
@@ -499,14 +580,6 @@ function TicketModal({ clientId, clientName, ticket, onClose, onSaved }) {
         </div>
         <div className="form-grid-2">
           <div className="form-group">
-            <label>עדיפות</label>
-            <select className="input" value={f.priority} onChange={e => set('priority', e.target.value)}>
-              <option value="high">🔥 דחוף</option>
-              <option value="medium">⚡ בינוני</option>
-              <option value="low">🟢 נמוך</option>
-            </select>
-          </div>
-          <div className="form-group">
             <label>סטטוס</label>
             <select className="input" value={f.status} onChange={e => set('status', e.target.value)}>
               <option value="open">🔴 פתוח</option>
@@ -514,6 +587,18 @@ function TicketModal({ clientId, clientName, ticket, onClose, onSaved }) {
               <option value="closed">🟢 סגור</option>
             </select>
           </div>
+          <div className="form-group">
+            <label>עדיפות</label>
+            <select className="input" value={f.priority} onChange={e => set('priority', e.target.value)}>
+              <option value="high">🔥 דחוף</option>
+              <option value="medium">⚡ בינוני</option>
+              <option value="low">🟢 נמוך</option>
+            </select>
+          </div>
+        </div>
+        <div className="form-group">
+          <label>מטפל</label>
+          <input className="input" placeholder="שם המטפל" value={f.assigned_to} onChange={e => set('assigned_to', e.target.value)} />
         </div>
         {f.status === 'closed' && (
           <div className="form-group">

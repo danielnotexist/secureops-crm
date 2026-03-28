@@ -28,6 +28,11 @@ CREATE TABLE IF NOT EXISTS clients (
   services_count INT DEFAULT 0,
   assets_count INT DEFAULT 0,
   tickets_count INT DEFAULT 0,
+  contacts_count INT DEFAULT 0,
+  documents_count INT DEFAULT 0,
+  address TEXT,
+  contract_start DATE,
+  contract_end DATE,
   created_at TIMESTAMPTZ DEFAULT now(),
   updated_at TIMESTAMPTZ DEFAULT now()
 );
@@ -68,6 +73,8 @@ CREATE TABLE IF NOT EXISTS tickets (
   description TEXT,
   priority TEXT DEFAULT 'medium' CHECK (priority IN ('high','medium','low')),
   status TEXT DEFAULT 'open' CHECK (status IN ('open','inprogress','closed')),
+  resolution_notes TEXT,
+  assigned_to TEXT,
   created_at TIMESTAMPTZ DEFAULT now(),
   updated_at TIMESTAMPTZ DEFAULT now()
 );

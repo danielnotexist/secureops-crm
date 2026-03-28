@@ -1,20 +1,17 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
-import { useAuth } from '../context/AuthContext'
-import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
-import { TrendingUp, Users, FolderKanban, AlertTriangle, CheckCircle, Wrench } from 'lucide-react'
+import { Users, FolderKanban, Ticket, Wrench, Server, AlertTriangle } from 'lucide-react'
 
 export default function DashboardPage() {
-  const { user } = useAuth()
   const navigate = useNavigate()
-  const [stats, setStats] = useState(null)
+  const [loading, setLoading] = useState(true)
   const [clients, setClients] = useState([])
   const [projects, setProjects] = useState([])
-  const [recentLog, setRecentLog] = useState([])
-  const [loading, setLoading] = useState(true)
-  const hour = new Date().getHours()
-  const greeting = hour < 12 ? '🌅 בוקר טוב' : hour < 17 ? '☀️ צהריים טובים' : '🌙 ערב טוב'
+  const [openTickets, setOpenTickets] = useState(0)
+  const [activeServices, setActiveServices] = useState(0)
+  const [assetsTotal, setAssetsTotal] = useState(0)
+  const [expiringSoon, setExpiringSoon] = useState(0)
 
   useEffect(() => {
     loadAll()
@@ -23,184 +20,193 @@ export default function DashboardPage() {
   const loadAll = async () => {
     setLoading(true)
     try {
-      const [{ data: clientsData }, { data: projectsData }, { data: logData }] = await Promise.all([
+      const today = new Date()
+      const in30 = new Date(today)
+      in30.setDate(in30.getDate() + 30)
+      const in30s = in30.toISOString().slice(0, 10)
+
+      const [
+        { data: clientsData },
+        { data: projectsData },
+        { count: openTix },
+        { count: svcActive },
+        { count: assetsC },
+        { data: expiring },
+      ] = await Promise.all([
         supabase.from('clients').select('*').order('created_at', { ascending: false }),
-        supabase.from('projects').select('*, clients(name)').order('created_at', { ascending: false }),
-        supabase.from('activity_log').select('*').order('created_at', { ascending: false }).limit(8)
+        supabase.from('projects').select('*'),
+        supabase.from('tickets').select('*', { count: 'exact', head: true }).neq('status', 'closed'),
+        supabase.from('services').select('*', { count: 'exact', head: true }).eq('status', 'active'),
+        supabase.from('assets').select('*', { count: 'exact', head: true }),
+        supabase
+          .from('services')
+          .select('id')
+          .eq('status', 'active')
+          .not('end_date', 'is', null)
+          .lte('end_date', in30s)
+          .gte('end_date', today.toISOString().slice(0, 10)),
       ])
+
       const c = clientsData || []
       const p = projectsData || []
       setClients(c)
       setProjects(p)
-      setRecentLog(logData || [])
-      const totalRevenue = c.reduce((s, x) => s + (x.monthly_value || 0), 0)
-      setStats({
-        total: c.length,
-        active: c.filter(x => x.status === 'active').length,
-        revenue: totalRevenue,
-        openProjects: p.filter(x => x.status === 'active').length,
-        doneProjects: p.filter(x => x.status === 'done').length,
-        totalProjects: p.length
-      })
+      setOpenTickets(openTix ?? 0)
+      setActiveServices(svcActive ?? 0)
+      setAssetsTotal(assetsC ?? 0)
+      setExpiringSoon(Array.isArray(expiring) ? expiring.length : 0)
     } finally {
       setLoading(false)
     }
   }
 
-  const chartData = [
-    { name: 'ינו', value: 3200 }, { name: 'פבר', value: 4100 }, { name: 'מרץ', value: 3800 },
-    { name: 'אפר', value: 5200 }, { name: 'מאי', value: 4900 }, { name: 'יונ', value: 6100 },
-    { name: 'יול', value: 5800 }, { name: 'אוג', value: stats?.revenue || 7300 }
+  const totalRevenue = clients.reduce((s, x) => s + (Number(x.monthly_value) || 0), 0)
+  const activeClients = clients.filter((x) => x.status === 'active').length
+  const activeProjects = projects.filter((x) => x.status === 'active').length
+
+  const statCards = [
+    { label: 'סה"כ לקוחות', value: clients.length, sub: `${activeClients} פעילים`, icon: Users, color: '#2563eb', bg: 'rgba(37,99,235,0.1)' },
+    { label: 'לקוחות פעילים', value: activeClients, sub: 'מתוך כלל הרשומות', icon: Users, color: '#059669', bg: 'rgba(5,150,105,0.1)' },
+    { label: 'הכנסה חודשית', value: `₪${totalRevenue.toLocaleString()}`, sub: 'מסכום תשלומים חודשיים', icon: null, emoji: '💵', color: '#2563eb', bg: 'rgba(37,99,235,0.08)' },
+    { label: 'נכסים מנוהלים', value: assetsTotal, sub: 'בכל הלקוחות', icon: Server, color: '#7c3aed', bg: 'rgba(124,58,237,0.1)' },
+    { label: 'שירותים פעילים', value: activeServices, sub: 'מנויים פעילים', icon: Wrench, color: '#0891b2', bg: 'rgba(8,145,178,0.1)' },
+    { label: 'פרויקטים פעילים', value: activeProjects, sub: `${projects.length} בסך הכל`, icon: FolderKanban, color: '#7c3aed', bg: 'rgba(124,58,237,0.08)' },
+    { label: 'קריאות פתוחות', value: openTickets, sub: 'דורשות טיפול', icon: Ticket, color: '#dc2626', bg: 'rgba(220,38,38,0.1)' },
+    { label: 'שירותים שפגים בקרוב', value: expiringSoon, sub: 'ב-30 הימים הקרובים', icon: AlertTriangle, color: '#64748b', bg: 'rgba(100,116,139,0.12)' },
   ]
 
-  const statCards = stats ? [
-    { label: 'סה"כ לקוחות', value: stats.total, icon: '👥', color: '#2d6ef6', sub: `${stats.active} פעילים` },
-    { label: 'הכנסה חודשית', value: `₪${stats.revenue.toLocaleString()}`, icon: '💰', color: '#22c55e', sub: 'מכלל הלקוחות' },
-    { label: 'פרויקטים פעילים', value: stats.openProjects, icon: '📁', color: '#f59e0b', sub: `${stats.totalProjects} בסך הכל` },
-    { label: 'פרויקטים הושלמו', value: stats.doneProjects, icon: '✅', color: '#00e5c8', sub: 'החודש האחרון' },
-  ] : []
-
-  if (loading) return (
-    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 16, marginBottom: 24 }}>
-      {[1,2,3,4].map(i => <div key={i} className="skeleton" style={{ height: 110, borderRadius: 12 }} />)}
-    </div>
-  )
-
-  return (
-    <div className="animate-in">
-      {/* Greeting */}
-      <div style={{ marginBottom: 28 }}>
-        <h1 style={{ fontSize: 26, fontWeight: 800, color: 'var(--text)' }}>
-          {greeting}, {user?.name}! 👋
-        </h1>
-        <p style={{ color: 'var(--text2)', marginTop: 4, fontSize: 15 }}>
-          הנה סקירה כללית של המערכת שלך
-        </p>
-      </div>
-
-      {/* Stat cards */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px,1fr))', gap: 16, marginBottom: 24 }}>
-        {statCards.map((s, i) => (
-          <div key={i} className="card" style={{
-            position: 'relative',
-            overflow: 'hidden',
-            transition: 'transform 0.2s, box-shadow 0.2s',
-            cursor: 'default',
-            animationDelay: `${i * 0.07}s`,
-            animation: 'fadeIn 0.4s ease both'
-          }}
-          onMouseEnter={e => e.currentTarget.style.transform = 'translateY(-2px)'}
-          onMouseLeave={e => e.currentTarget.style.transform = 'translateY(0)'}
-          >
-            <div style={{
-              position: 'absolute', top: 0, right: 0, width: 80, height: 80,
-              borderRadius: '0 12px 0 80px',
-              background: `${s.color}18`
-            }} />
-            <div style={{ fontSize: 28, marginBottom: 8 }}>{s.icon}</div>
-            <div style={{ fontSize: 26, fontWeight: 800, color: s.color, lineHeight: 1 }}>{s.value}</div>
-            <div style={{ fontSize: 13, color: 'var(--text)', fontWeight: 600, marginTop: 4 }}>{s.label}</div>
-            <div style={{ fontSize: 12, color: 'var(--text3)', marginTop: 2 }}>{s.sub}</div>
-          </div>
+  if (loading) {
+    return (
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: 12 }}>
+        {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
+          <div key={i} className="skeleton" style={{ height: 108, borderRadius: 12 }} />
         ))}
       </div>
+    )
+  }
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1.6fr 1fr', gap: 16, marginBottom: 24 }}>
-        {/* Revenue chart */}
-        <div className="card">
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 20 }}>
-            <TrendingUp size={18} color="var(--primary)" />
-            <span style={{ fontWeight: 700, fontSize: 15 }}>📈 מגמת הכנסות</span>
-          </div>
-          <ResponsiveContainer width="100%" height={180}>
-            <AreaChart data={chartData}>
-              <defs>
-                <linearGradient id="rev" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#2d6ef6" stopOpacity={0.3} />
-                  <stop offset="95%" stopColor="#2d6ef6" stopOpacity={0} />
-                </linearGradient>
-              </defs>
-              <XAxis dataKey="name" tick={{ fill: 'var(--text3)', fontSize: 11 }} axisLine={false} tickLine={false} />
-              <YAxis tick={{ fill: 'var(--text3)', fontSize: 11 }} axisLine={false} tickLine={false} />
-              <Tooltip contentStyle={{ background: 'var(--card2)', border: '1px solid var(--border)', borderRadius: 8, color: 'var(--text)', fontSize: 13 }} formatter={v => [`₪${v.toLocaleString()}`, 'הכנסה']} />
-              <Area type="monotone" dataKey="value" stroke="#2d6ef6" strokeWidth={2} fill="url(#rev)" />
-            </AreaChart>
-          </ResponsiveContainer>
-        </div>
+  return (
+    <div className="animate-in" dir="rtl">
+      <div className="page-title-block" style={{ marginBottom: 22 }}>
+        <h1 style={{ fontSize: 24, fontWeight: 800, color: 'var(--text)' }}>לוח בקרה</h1>
+        <p style={{ color: 'var(--text2)', marginTop: 6, fontSize: 14 }}>סקירה כללית של מערכת ניהול הלקוחות</p>
+      </div>
 
-        {/* Recent log */}
-        <div className="card">
-          <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 16 }}>📋 פעילות אחרונה</div>
-          {recentLog.length === 0 ? (
-            <div className="empty-state" style={{ padding: '20px 0' }}>
-              <span className="empty-icon">🕐</span>
-              <p>אין פעילות עדיין</p>
+      <div className="stat-pill-grid" style={{ marginBottom: 22 }}>
+        {statCards.map((s, i) => {
+          const Ico = s.icon
+          return (
+            <div
+              key={s.label}
+              className="card"
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                gap: 12,
+                padding: '14px 16px',
+                animation: `fadeIn 0.35s ease ${i * 0.04}s both`,
+              }}
+            >
+              <div style={{ textAlign: 'right', minWidth: 0, flex: 1 }}>
+                <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text2)', marginBottom: 4 }}>{s.label}</div>
+                <div style={{ fontSize: 22, fontWeight: 800, color: s.color, lineHeight: 1.15 }}>{s.value}</div>
+                <div style={{ fontSize: 11, color: 'var(--text3)', marginTop: 4 }}>{s.sub}</div>
+              </div>
+              <div
+                style={{
+                  width: 44,
+                  height: 44,
+                  borderRadius: 12,
+                  background: s.bg,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  flexShrink: 0,
+                }}
+              >
+                {Ico ? <Ico size={22} color={s.color} strokeWidth={2} /> : <span style={{ fontSize: 22 }}>{s.emoji}</span>}
+              </div>
             </div>
-          ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-              {recentLog.map(log => (
-                <div key={log.id} style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
-                  <div style={{
-                    width: 28, height: 28, borderRadius: '50%', flexShrink: 0,
-                    background: log.user_email?.startsWith('daniel') ? 'rgba(45,110,246,0.2)' : 'rgba(124,92,252,0.2)',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    fontSize: 12, fontWeight: 700,
-                    color: log.user_email?.startsWith('daniel') ? 'var(--primary)' : 'var(--accent2)'
-                  }}>
-                    {log.user_email?.startsWith('daniel') ? 'ד' : 'ד'}
+          )
+        })}
+      </div>
+
+      <div className="card">
+        <div className="page-header-row" style={{ marginBottom: 14 }}>
+          <div className="page-title-block">
+            <div style={{ fontWeight: 700, fontSize: 15 }}>לקוחות אחרונים</div>
+          </div>
+          <button type="button" className="btn btn-ghost btn-sm" onClick={() => navigate('/clients')}>
+            כל הלקוחות ←
+          </button>
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          {clients.slice(0, 4).map((c) => {
+            const openT = c.tickets_count ?? 0
+            return (
+              <div
+                key={c.id}
+                role="button"
+                tabIndex={0}
+                onClick={() => navigate(`/clients/${c.id}`)}
+                onKeyDown={(e) => e.key === 'Enter' && navigate(`/clients/${c.id}`)}
+                className="card"
+                style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: 10,
+                  padding: '12px 14px',
+                  cursor: 'pointer',
+                  boxShadow: 'none',
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+                  <div
+                    style={{
+                      width: 40,
+                      height: 40,
+                      borderRadius: '50%',
+                      flexShrink: 0,
+                      background: 'linear-gradient(135deg, var(--primary-soft), rgba(124,58,237,0.2))',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: 16,
+                      fontWeight: 800,
+                      color: 'var(--primary)',
+                    }}
+                  >
+                    {c.name?.[0]}
                   </div>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: 13, color: 'var(--text)', fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{log.description}</div>
-                    <div style={{ fontSize: 11, color: 'var(--text3)' }}>
-                      {log.user_email?.startsWith('daniel') ? 'דניאל' : 'דביר'} · {new Date(log.created_at).toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' })}
+                  <div style={{ flex: 1, minWidth: 140, textAlign: 'right' }}>
+                    <div style={{ fontWeight: 700, fontSize: 14 }}>{c.name}</div>
+                    <div style={{ fontSize: 12, color: 'var(--text3)' }}>
+                      {c.contact_name || '—'} {c.city ? `· ${c.city}` : ''}
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                    {openT > 0 && (
+                      <span className="badge badge-tickets-open">
+                        🎫 {openT} קריאות
+                      </span>
+                    )}
+                    <span className={`badge badge-${c.status === 'active' ? 'active' : c.status === 'potential' ? 'potential' : 'inactive'}`}>
+                      {c.status === 'active' ? 'פעיל' : c.status === 'potential' ? 'פוטנציאלי' : 'לא פעיל'}
+                    </span>
+                  </div>
+                  <div style={{ textAlign: 'left', marginInlineStart: 'auto' }}>
+                    <div style={{ fontSize: 15, fontWeight: 800, color: 'var(--primary)' }}>
+                      {c.monthly_value ? `${Number(c.monthly_value).toLocaleString()} ₪` : '—'}
+                    </div>
+                    <div style={{ fontSize: 11, color: 'var(--text3)', textAlign: 'left' }}>
+                      {c.monthly_value ? `${Number(c.services_count || 0)} שירותים · ${Number(c.assets_count || 0)} נכסים` : ''}
                     </div>
                   </div>
                 </div>
-              ))}
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Recent clients */}
-      <div className="card">
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
-          <div style={{ fontWeight: 700, fontSize: 15 }}>👥 לקוחות אחרונים</div>
-          <button className="btn btn-ghost btn-sm" onClick={() => navigate('/clients')}>כל הלקוחות →</button>
-        </div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-          {clients.slice(0, 4).map(c => (
-            <div key={c.id} onClick={() => navigate(`/clients/${c.id}`)} style={{
-              display: 'flex', alignItems: 'center', gap: 12,
-              padding: '10px 14px', borderRadius: 10,
-              background: 'var(--bg2)', border: '1px solid var(--border)',
-              cursor: 'pointer', transition: 'all 0.15s'
-            }}
-            onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--primary)'; e.currentTarget.style.background = 'rgba(45,110,246,0.05)' }}
-            onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.background = 'var(--bg2)' }}
-            >
-              <div style={{
-                width: 38, height: 38, borderRadius: 10, flexShrink: 0,
-                background: 'linear-gradient(135deg, var(--primary), var(--accent2))',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontSize: 16, fontWeight: 800, color: '#fff'
-              }}>
-                {c.name?.[0]}
               </div>
-              <div style={{ flex: 1 }}>
-                <div style={{ fontWeight: 600, fontSize: 14 }}>{c.name}</div>
-                <div style={{ fontSize: 12, color: 'var(--text3)' }}>{c.contact_name} · {c.city}</div>
-              </div>
-              <div>
-                <span className={`badge badge-${c.status === 'active' ? 'active' : c.status === 'potential' ? 'potential' : 'inactive'}`}>
-                  {c.status === 'active' ? '✅ פעיל' : c.status === 'potential' ? '🌱 פוטנציאלי' : '⚪ לא פעיל'}
-                </span>
-              </div>
-              <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--success)', minWidth: 70, textAlign: 'left' }}>
-                {c.monthly_value ? `₪${c.monthly_value.toLocaleString()}` : '—'}
-              </div>
-            </div>
-          ))}
+            )
+          })}
         </div>
       </div>
     </div>
