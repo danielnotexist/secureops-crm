@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { createPortal } from 'react-dom'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../context/AuthContext'
 import { useToast } from './Toast'
@@ -73,7 +74,7 @@ export default function ClientModal({ onClose, onSaved, client }) {
     }
   }
 
-  return (
+  return createPortal(
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
@@ -175,6 +176,7 @@ export default function ClientModal({ onClose, onSaved, client }) {
           </div>
         </form>
       </div>
-    </div>
+    </div>,
+    document.body
   )
 }

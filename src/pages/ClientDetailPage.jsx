@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import { useParams, useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../context/AuthContext'
@@ -366,7 +367,7 @@ function Empty({ text }) {
   return <div className="empty-state"><div style={{ fontSize: 36, opacity: 0.4 }}>📭</div><p>{text}</p></div>
 }
 function Modal({ title, onClose, children, wide }) {
-  return (
+  return createPortal(
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal" style={wide ? { maxWidth: 560 } : {}} onClick={e => e.stopPropagation()}>
         <div className="modal-header">
@@ -375,7 +376,8 @@ function Modal({ title, onClose, children, wide }) {
         </div>
         {children}
       </div>
-    </div>
+    </div>,
+    document.body
   )
 }
 function Footer({ onClose, loading, label }) {

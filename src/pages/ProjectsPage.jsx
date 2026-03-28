@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../context/AuthContext'
 import { useToast } from '../components/Toast'
@@ -248,7 +249,8 @@ function ProjectModal({ clients, project, onClose, onSaved }) {
       })
       addToast('פרויקט עודכן ✅', 'success')
     } else {
-      await supabase.from('projects').insert(payload)
+      const { error } = await supabase.from('projects').insert(payload)
+      if (error) { addToast('שגיאה בשמירה: ' + error.message, 'error'); setLoading(false); return }
       await supabase.from('activity_log').insert({
         user_email: user.email,
         action: 'add_project',
@@ -260,7 +262,7 @@ function ProjectModal({ clients, project, onClose, onSaved }) {
     onSaved()
   }
 
-  return (
+  return createPortal(
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal" style={{ maxWidth: 540 }} onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
@@ -352,6 +354,7 @@ function ProjectModal({ clients, project, onClose, onSaved }) {
           </div>
         </form>
       </div>
-    </div>
+    </div>,
+    document.body
   )
 }

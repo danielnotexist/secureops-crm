@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../context/AuthContext'
@@ -292,7 +293,8 @@ function TicketModal({ clients, ticket, onClose, onSaved }) {
       })
       addToast('קריאה עודכנה ✅', 'success')
     } else {
-      await supabase.from('tickets').insert(payload)
+      const { error } = await supabase.from('tickets').insert(payload)
+      if (error) { addToast('שגיאה בשמירה: ' + error.message, 'error'); setLoading(false); return }
       await supabase.from('activity_log').insert({
         user_email: user.email,
         action: 'add_ticket',
@@ -304,7 +306,7 @@ function TicketModal({ clients, ticket, onClose, onSaved }) {
     onSaved()
   }
 
-  return (
+  return createPortal(
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
@@ -366,6 +368,7 @@ function TicketModal({ clients, ticket, onClose, onSaved }) {
           </div>
         </form>
       </div>
-    </div>
+    </div>,
+    document.body
   )
 }
