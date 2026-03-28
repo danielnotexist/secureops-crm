@@ -187,7 +187,7 @@ export default function ClientsPage() {
                     </div>
                   </div>
 
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginInlineStart: 'auto' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginInlineStart: 'auto', flexShrink: 0 }}>
                     <div style={{ textAlign: 'center', minWidth: 88 }}>
                       <div style={{ fontWeight: 800, fontSize: 16, color: 'var(--primary)' }}>
                         {c.monthly_value ? `${Number(c.monthly_value).toLocaleString()} ₪` : '—'}

@@ -168,9 +168,9 @@ export default function ProjectsPage() {
                 </div>
                 {p.progress != null && (
                   <div style={{ marginTop: 10 }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: 'var(--text3)', marginBottom: 4 }}>
-                      <span>{p.progress}%</span>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: 'var(--text3)', marginBottom: 4, direction: 'rtl' }}>
                       <span>התקדמות</span>
+                      <span>{p.progress}%</span>
                     </div>
                     <div style={{ height: 5, background: 'var(--bg3)', borderRadius: 3, overflow: 'hidden', direction: 'ltr' }}>
                       <div
@@ -329,7 +329,7 @@ function ProjectModal({ clients, project, onClose, onSaved }) {
             <input className="input" type="number" value={form.budget} onChange={(e) => set('budget', e.target.value)} />
           </div>
           <div className="form-group">
-            <label>התקדמות: {form.progress}%</label>
+            <label style={{ direction: 'rtl', textAlign: 'right' }}>התקדמות: {form.progress}%</label>
             <input
               type="range"
               min="0"
